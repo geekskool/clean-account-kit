@@ -7,5 +7,5 @@ Software requirements:
 Install dependencies by navigating to project directory
 `npm install`
 
-Run the below file
+Run app
 `clean index.cl`
