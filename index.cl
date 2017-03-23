@@ -3,10 +3,55 @@ import node-core
 express = require 'express'
 path = require 'path'
 sessions = require 'client-sessions'
+bodyParser = require 'body-parser'
+Guid = require 'guid'
+Mustache = require 'mustache'
+Request = require 'request'
+Querystring  = require 'querystring'
 
+bodyParserJSON = bodyParser.json ()
+bodyParserURL =  bodyParser.urlencoded {extended: true }
 
 app = express ()
 app.use (express.static (path.join __dirname 'public'))
+
+app.use bodyParserJSON
+app.use bodyParserURL
+
+// update config file for details of account_kit_api_version
+// app_secret
+
+account_kit = do
+                data <- readFile './config/account-kit.json'
+                return data
+
+
+csrf_guid = Guid.raw ()
+
+
+// Add the app_id , account_kit_api_version, app_id from fb account kit
+// toogle button 'require app secret to `NO` in account-kit dashBoard'
+
+account_kit_api_version = 'v1.1'
+app_id = '*************************'
+app_secret = '************************************'
+
+
+
+me_endpoint_base_url = 'https://graph.accountkit.com/v1.1/me'
+token_exchange_base_url = 'https://graph.accountkit.com/v1.1/access_token'
+
+
+loadLoginData = do
+                  data <- readFile 'views/login.html'
+                  return data
+
+
+loadLoginSuccData = do
+                      data <- readFile 'views/login_success.html'
+                      return data
+
+
 
 app.use (sessions {
   cookieName: 'session',
@@ -19,13 +64,48 @@ do
   mayBeUndefined req.session.user (res.redirect '/login')
   res.send 'hello world'
 
+
 do
-  req res <- IO (app.get '/login')
-  res.send 'login page'
+  req res _ <- IO (app.get '/login')
+  let view =  { appId: app_id,
+                csrf: csrf_guid,
+                version: account_kit_api_version}
+  loadLogin <- loadLoginData
+  let html = Mustache.to_html loadLogin view
+  res.send html
+
+
+
+do
+  req res _ <- IO (app.post '/login_success')
+  let csrfCheck = (req.body.csrf == csrf_guid)
+  mayBeFalse csrfCheck (res.end 'Something went')
+  putLine 'This is after'
+  let app_access_token = ['AA', app_id, app_secret].join '|'
+  let params = {
+                 grant_type: 'authorization_code',
+                 code: req.body.code,
+                 access_token: app_access_token
+                    }
+   loadLoginSuccess <- loadLoginSuccData
+   let token_exchange_url = token_exchange_base_url ++ '?' ++ (Querystring.stringify params)
+   err resp respBody <- IO (Request.get {url: token_exchange_url, json: true})
+   let view = {
+            user_access_token: respBody.access_token,
+            expires_at: respBody.expires_at,
+            user_id: respBody.id,
+                }
+   let me_endpoint_url = me_endpoint_base_url ++ '?access_token=' ++ respBody.access_token
+   errURL respURL respBodyURL <- IO (Request.get {url: me_endpoint_url, json:true })
+   defineProp view 'phone_num' respBodyURL.phone.number
+   let html = Mustache.to_html loadLoginSuccess view
+   res.send 'Account kit implementation in clean'
+
 
 do
   req res _ <- IO (app.get '/logout')
   delete req.session.user
   res.redirect '/'
 
-app.listen 3000
+port = 3000 || process.env.PORT
+app.listen port
