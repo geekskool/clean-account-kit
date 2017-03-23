@@ -1,11 +1,15 @@
 # clean-account-kit
-implementation of facebook account kit in clean-account-kit
+Implementation of facebook account kit in clean-account-kit
 
-Software requirements:
-`facebook Account-kit`
+**Software requirements**:
 
-Install dependencies by navigating to project directory
-`npm install`
+​      [clean](https://github.com/geekskool/clean) 
+​      [Account kit](https://developers.facebook.com/docs/accountkit)
 
-Run app
-`clean index.cl`
+**Install dependencies by navigating to project directory**
+
+​    `npm install`
+
+**Run** **app**
+
+  `clean index.cl`
