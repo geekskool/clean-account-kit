@@ -25,16 +25,16 @@ account_kit = do
                 data <- readFile './config/account-kit.json'
                 return data
 
+appConfig = require './config/account-kit.json'
 
 csrf_guid = Guid.raw ()
 
 
-// Add the app_id , account_kit_api_version, app_id from fb account kit
-// toogle button 'require app secret to `NO` in account-kit dashBoard'
+//Add account_kit essentials in config file and require
 
-account_kit_api_version = 'v1.1'
-app_id = '*************************'
-app_secret = '************************************'
+account_kit_api_version = appConfig.version
+app_id = appConfig.app_id
+app_secret = appConfig.app_secret
 
 
 
