@@ -9,49 +9,20 @@ Mustache = require 'mustache'
 Request = require 'request'
 Querystring  = require 'querystring'
 
+appConfig = require './config/account-kit.json'
+
 bodyParserJSON = bodyParser.json ()
 bodyParserURL =  bodyParser.urlencoded {extended: true }
 
 app = express ()
 app.use (express.static (path.join __dirname 'public'))
-
 app.use bodyParserJSON
 app.use bodyParserURL
 
-// update config file for details of account_kit_api_version
-// app_secret
+csrfGuid = Guid.raw ()
 
-account_kit = do
-                data <- readFile './config/account-kit.json'
-                return data
-
-appConfig = require './config/account-kit.json'
-
-csrf_guid = Guid.raw ()
-
-
-//Add account_kit essentials in config file and require
-
-account_kit_api_version = appConfig.version
-app_id = appConfig.app_id
-app_secret = appConfig.app_secret
-
-
-
-me_endpoint_base_url = 'https://graph.accountkit.com/v1.1/me'
-token_exchange_base_url = 'https://graph.accountkit.com/v1.1/access_token'
-
-
-loadLoginData = do
-                  data <- readFile 'views/login.html'
-                  return data
-
-
-loadLoginSuccData = do
-                      data <- readFile 'views/login_success.html'
-                      return data
-
-
+meEndpointBaseURL = 'https://graph.accountkit.com/' ++ appConfig.version ++ '/me'
+tokenExchangeBaseURL = 'https://graph.accountkit.com/' ++ appConfig.version ++ '/access_token'
 
 app.use (sessions {
   cookieName: 'session',
@@ -67,10 +38,11 @@ do
 
 do
   req res _ <- IO (app.get '/login')
-  let view =  { appId: app_id,
-                csrf: csrf_guid,
-                version: account_kit_api_version}
-  loadLogin <- loadLoginData
+  let view =  { appId: appConfig.appID,
+                csrf: csrfGuid,
+                version: appConfig.version
+                }
+  loadLogin <- readFile 'views/login.html'
   let html = Mustache.to_html loadLogin view
   res.send html
 
@@ -78,28 +50,26 @@ do
 
 do
   req res _ <- IO (app.post '/login_success')
-  let csrfCheck = (req.body.csrf == csrf_guid)
-  mayBeFalse csrfCheck (res.end 'Something went')
-  putLine 'This is after'
-  let app_access_token = ['AA', app_id, app_secret].join '|'
+  let csrfCheck = (req.body.csrf == csrfGuid)
+  mayBeFalse csrfCheck (res.end 'Something went terribly wrong')
   let params = {
                  grant_type: 'authorization_code',
                  code: req.body.code,
-                 access_token: app_access_token
+                 access_token: ['AA', appConfig.appID, appConfig.appSecret].join '|'
                     }
-   loadLoginSuccess <- loadLoginSuccData
-   let token_exchange_url = token_exchange_base_url ++ '?' ++ (Querystring.stringify params)
-   err resp respBody <- IO (Request.get {url: token_exchange_url, json: true})
+   loadLoginSuccess <- readFile 'views/login_success.html'
+   let tokenExchangeURL = tokenExchangeBaseURL ++ '?' ++ (Querystring.stringify params)
+   err resp respBody <- IO (Request.get {url: tokenExchangeURL, json: true})
    let view = {
-            user_access_token: respBody.access_token,
-            expires_at: respBody.expires_at,
-            user_id: respBody.id,
+            userAccessToken: respBody.access_token,
+            expiresAt: respBody.expires_at,
+            userId: respBody.id,
                 }
-   let me_endpoint_url = me_endpoint_base_url ++ '?access_token=' ++ respBody.access_token
-   errURL respURL respBodyURL <- IO (Request.get {url: me_endpoint_url, json:true })
-   defineProp view 'phone_num' respBodyURL.phone.number
+   let meEndpointURL = meEndpointBaseURL ++ '?access_token=' ++ view.userAccessToken
+   errURL respURL respBodyURL <- IO (Request.get {url: meEndpointURL, json:true })
+   defineProp view 'phoneNumber' respBodyURL.phone.number
    let html = Mustache.to_html loadLoginSuccess view
-   res.send 'Account kit implementation in clean'
+   res.send html
 
 
 do
