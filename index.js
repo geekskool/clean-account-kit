@@ -17,12 +17,12 @@ app.use(bodyParserURL);
 // update config file for details of account_kit_api_version
 // app_secret
 const account_kit = IO.readFile('./config/account-kit.json').map(data => [data]);
+const appConfig = require('./config/account-kit.json');
 const csrf_guid = Guid.raw();
-// Add the app_id , account_kit_api_version, app_id from fb account kit
-// toogle button 'require app secret to `NO` in account-kit dashBoard'
-const account_kit_api_version = 'v1.1';
-const app_id = '*************************';
-const app_secret = '************************************';
+//Add account_kit essentials in config file and require
+const account_kit_api_version = appConfig.version;
+const app_id = appConfig.app_id;
+const app_secret = appConfig.app_secret;
 const me_endpoint_base_url = 'https://graph.accountkit.com/v1.1/me';
 const token_exchange_base_url = 'https://graph.accountkit.com/v1.1/access_token';
 const loadLoginData = IO.readFile('views/login.html').map(data => [data]);
