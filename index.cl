@@ -35,18 +35,14 @@ app.use (sessions {
   activeDuration: 24 * 60 * 60 * 1000 })
 
 do
-  req res <- IO (app.get '/')
-  mayBeUndefined req.session.user (res.redirect '/login')
-  res.send 'hello world'
-
+  request response <- IO (app.get '/')
+  mayBeUndefined request.session.user (response.redirect '/login')
+  response.send 'hello world'
 
 do
-  req res _ <- IO (app.get '/login')
-  loadLogin <- readFile 'views/login.html'
-  let html = Mustache.to_html loadLogin AKINIT
-  res.send html
-
-
+  request response _ <- IO (app.get '/login')
+  loginTemplate <- readFile 'views/login.html'
+  response.send (Mustache.to_html loginTemplate AKINIT)
 
 do
   req res _ <- IO (app.post '/login_success')
@@ -73,9 +69,9 @@ do
 
 
 do
-  req res _ <- IO (app.get '/logout')
-  delete req.session.user
-  res.redirect '/'
+  request response _ <- IO (app.get '/logout')
+  delete request.session.user
+  response.redirect '/'
 
-port = process.env.PORT || 3000
-app.listen port
+PORT = process.env.PORT || 3000
+app.listen PORT

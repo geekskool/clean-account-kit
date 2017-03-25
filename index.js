@@ -29,17 +29,11 @@ app.use(sessions({
     duration: 7 * 24 * 60 * 60 * 1000,
     activeDuration: 24 * 60 * 60 * 1000
 }));
-IO.createIO(cb => app.get('/', cb)).mayBeUndefined((req, res) => req.session.user, (req, res) => res.redirect('/login')).then((req, res) => {
-    res.send('hello world');
+IO.createIO(cb => app.get('/', cb)).mayBeUndefined((request, response) => request.session.user, (request, response) => response.redirect('/login')).then((request, response) => {
+    response.send('hello world');
 });
-IO.createIO(cb => app.get('/login', cb)).bind((req, res, _) => IO.readFile('views/login.html')).map((req, res, _, loadLogin) => [
-    Mustache.to_html(loadLogin, AKINIT),
-    req,
-    res,
-    _,
-    loadLogin
-]).then((html, req, res, _, loadLogin) => {
-    res.send(html);
+IO.createIO(cb => app.get('/login', cb)).bind((request, response, _) => IO.readFile('views/login.html')).then((request, response, _, loginTemplate) => {
+    response.send(Mustache.to_html(loginTemplate, AKINIT));
 });
 IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     req.body.csrf === csrfGuid,
@@ -147,15 +141,15 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
 ]).then((html, meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => {
     res.send(html);
 });
-IO.createIO(cb => app.get('/logout', cb)).map((req, res, _) => {
-    (delete req.session.user)
+IO.createIO(cb => app.get('/logout', cb)).map((request, response, _) => {
+    (delete request.session.user)
     return [
-        req,
-        res,
+        request,
+        response,
         _
     ];
-}).then((req, res, _) => {
-    res.redirect('/');
+}).then((request, response, _) => {
+    response.redirect('/');
 });
-const port = process.env.PORT || 3000;
-app.listen(port);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT);
