@@ -11,6 +11,10 @@ Implementation of facebook account kit in clean-lang
 
 ​    `npm install`
 
+** Add app id/secret
+
+Edit account-kit-config-bak.json and rename to account-kit-config.json
+
 **Run** **app**
 
   `clean index.cl`
