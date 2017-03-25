@@ -4,20 +4,25 @@ const express = require('express');
 const path = require('path');
 const sessions = require('client-sessions');
 const bodyParser = require('body-parser');
-const Guid = require('guid');
 const Mustache = require('mustache');
 const Request = require('request');
 const Querystring = require('querystring');
-const appConfig = require('./account-kit-config.json');
+const Guid = require('guid');
+const csrfGuid = Guid.raw();
+const akConfig = require('./account-kit-config.json');
+const AKINIT = {
+    appId: akConfig.appID,
+    csrf: csrfGuid,
+    version: akConfig.version
+};
 const bodyParserJSON = bodyParser.json();
 const bodyParserURL = bodyParser.urlencoded({ extended: true });
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParserJSON);
 app.use(bodyParserURL);
-const csrfGuid = Guid.raw();
-const meEndpointBaseURL = 'https://graph.accountkit.com/' + appConfig.version + '/me';
-const tokenExchangeBaseURL = 'https://graph.accountkit.com/' + appConfig.version + '/access_token';
+const meEndpointBaseURL = 'https://graph.accountkit.com/' + akConfig.version + '/me';
+const tokenExchangeBaseURL = 'https://graph.accountkit.com/' + akConfig.version + '/access_token';
 app.use(sessions({
     cookieName: 'session',
     secret: 'mysecret',
@@ -27,23 +32,13 @@ app.use(sessions({
 IO.createIO(cb => app.get('/', cb)).mayBeUndefined((req, res) => req.session.user, (req, res) => res.redirect('/login')).then((req, res) => {
     res.send('hello world');
 });
-IO.createIO(cb => app.get('/login', cb)).map((req, res, _) => [
-    {
-        appId: appConfig.appID,
-        csrf: csrfGuid,
-        version: appConfig.version
-    },
-    req,
-    res,
-    _
-]).bind((view, req, res, _) => IO.readFile('views/login.html')).map((view, req, res, _, loadLogin) => [
-    Mustache.to_html(loadLogin, view),
-    view,
+IO.createIO(cb => app.get('/login', cb)).bind((req, res, _) => IO.readFile('views/login.html')).map((req, res, _, loadLogin) => [
+    Mustache.to_html(loadLogin, AKINIT),
     req,
     res,
     _,
     loadLogin
-]).then((html, view, req, res, _, loadLogin) => {
+]).then((html, req, res, _, loadLogin) => {
     res.send(html);
 });
 IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
@@ -57,8 +52,8 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
         code: req.body.code,
         access_token: [
             'AA',
-            appConfig.appID,
-            appConfig.appSecret
+            akConfig.appID,
+            akConfig.appSecret
         ].join('|')
     },
     csrfCheck,
@@ -162,5 +157,5 @@ IO.createIO(cb => app.get('/logout', cb)).map((req, res, _) => {
 }).then((req, res, _) => {
     res.redirect('/');
 });
-const port = 3000 || process.env.PORT;
+const port = process.env.PORT || 3000;
 app.listen(port);

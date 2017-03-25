@@ -4,12 +4,18 @@ express = require 'express'
 path = require 'path'
 sessions = require 'client-sessions'
 bodyParser = require 'body-parser'
-Guid = require 'guid'
 Mustache = require 'mustache'
 Request = require 'request'
 Querystring  = require 'querystring'
 
-appConfig = require './account-kit-config.json'
+Guid = require 'guid'
+csrfGuid = Guid.raw ()
+
+akConfig = require './account-kit-config.json'
+AKINIT =  { appId: akConfig.appID,
+            csrf: csrfGuid,
+            version: akConfig.version
+          }
 
 bodyParserJSON = bodyParser.json ()
 bodyParserURL =  bodyParser.urlencoded {extended: true }
@@ -19,10 +25,8 @@ app.use (express.static (path.join __dirname 'public'))
 app.use bodyParserJSON
 app.use bodyParserURL
 
-csrfGuid = Guid.raw ()
-
-meEndpointBaseURL = 'https://graph.accountkit.com/' ++ appConfig.version ++ '/me'
-tokenExchangeBaseURL = 'https://graph.accountkit.com/' ++ appConfig.version ++ '/access_token'
+meEndpointBaseURL = 'https://graph.accountkit.com/' ++ akConfig.version ++ '/me'
+tokenExchangeBaseURL = 'https://graph.accountkit.com/' ++ akConfig.version ++ '/access_token'
 
 app.use (sessions {
   cookieName: 'session',
@@ -38,12 +42,8 @@ do
 
 do
   req res _ <- IO (app.get '/login')
-  let view =  { appId: appConfig.appID,
-                csrf: csrfGuid,
-                version: appConfig.version
-                }
   loadLogin <- readFile 'views/login.html'
-  let html = Mustache.to_html loadLogin view
+  let html = Mustache.to_html loadLogin AKINIT
   res.send html
 
 
@@ -55,7 +55,7 @@ do
   let params = {
                  grant_type: 'authorization_code',
                  code: req.body.code,
-                 access_token: ['AA', appConfig.appID, appConfig.appSecret].join '|'
+                 access_token: ['AA', akConfig.appID, akConfig.appSecret].join '|'
                     }
    loadLoginSuccess <- readFile 'views/login_success.html'
    let tokenExchangeURL = tokenExchangeBaseURL ++ '?' ++ (Querystring.stringify params)
@@ -77,5 +77,5 @@ do
   delete req.session.user
   res.redirect '/'
 
-port = 3000 || process.env.PORT
+port = process.env.PORT || 3000
 app.listen port
