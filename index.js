@@ -8,25 +8,16 @@ const Guid = require('guid');
 const Mustache = require('mustache');
 const Request = require('request');
 const Querystring = require('querystring');
+const appConfig = require('./account-kit-config.json');
 const bodyParserJSON = bodyParser.json();
 const bodyParserURL = bodyParser.urlencoded({ extended: true });
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParserJSON);
 app.use(bodyParserURL);
-// update config file for details of account_kit_api_version
-// app_secret
-const account_kit = IO.readFile('./config/account-kit.json').map(data => [data]);
-const appConfig = require('./config/account-kit.json');
-const csrf_guid = Guid.raw();
-//Add account_kit essentials in config file and require
-const account_kit_api_version = appConfig.version;
-const app_id = appConfig.app_id;
-const app_secret = appConfig.app_secret;
-const me_endpoint_base_url = 'https://graph.accountkit.com/v1.1/me';
-const token_exchange_base_url = 'https://graph.accountkit.com/v1.1/access_token';
-const loadLoginData = IO.readFile('views/login.html').map(data => [data]);
-const loadLoginSuccData = IO.readFile('views/login_success.html').map(data => [data]);
+const csrfGuid = Guid.raw();
+const meEndpointBaseURL = 'https://graph.accountkit.com/' + appConfig.version + '/me';
+const tokenExchangeBaseURL = 'https://graph.accountkit.com/' + appConfig.version + '/access_token';
 app.use(sessions({
     cookieName: 'session',
     secret: 'mysecret',
@@ -38,14 +29,14 @@ IO.createIO(cb => app.get('/', cb)).mayBeUndefined((req, res) => req.session.use
 });
 IO.createIO(cb => app.get('/login', cb)).map((req, res, _) => [
     {
-        appId: app_id,
-        csrf: csrf_guid,
-        version: account_kit_api_version
+        appId: appConfig.appID,
+        csrf: csrfGuid,
+        version: appConfig.version
     },
     req,
     res,
     _
-]).bind((view, req, res, _) => loadLoginData).map((view, req, res, _, loadLogin) => [
+]).bind((view, req, res, _) => IO.readFile('views/login.html')).map((view, req, res, _, loadLogin) => [
     Mustache.to_html(loadLogin, view),
     view,
     req,
@@ -56,53 +47,43 @@ IO.createIO(cb => app.get('/login', cb)).map((req, res, _) => [
     res.send(html);
 });
 IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
-    req.body.csrf === csrf_guid,
+    req.body.csrf === csrfGuid,
     req,
     res,
     _
-]).mayBeFalse((csrfCheck, req, res, _) => csrfCheck, (csrfCheck, req, res, _) => res.end('Something went')).bind((csrfCheck, req, res, _) =>
-    (IO.putLine('This is after'))).map((csrfCheck, req, res, _) => [
-    [
-        'AA',
-        app_id,
-        app_secret
-    ].join('|'),
-    csrfCheck,
-    req,
-    res,
-    _
-]).map((app_access_token, csrfCheck, req, res, _) => [
+]).mayBeFalse((csrfCheck, req, res, _) => csrfCheck, (csrfCheck, req, res, _) => res.end('Something went terribly wrong')).map((csrfCheck, req, res, _) => [
     {
         grant_type: 'authorization_code',
         code: req.body.code,
-        access_token: app_access_token
+        access_token: [
+            'AA',
+            appConfig.appID,
+            appConfig.appSecret
+        ].join('|')
     },
-    app_access_token,
     csrfCheck,
     req,
     res,
     _
-]).bind((params, app_access_token, csrfCheck, req, res, _) => loadLoginSuccData).map((params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess) => [
-    token_exchange_base_url + '?' + Querystring.stringify(params),
+]).bind((params, csrfCheck, req, res, _) => IO.readFile('views/login_success.html')).map((params, csrfCheck, req, res, _, loadLoginSuccess) => [
+    tokenExchangeBaseURL + '?' + Querystring.stringify(params),
     params,
-    app_access_token,
     csrfCheck,
     req,
     res,
     _,
     loadLoginSuccess
-]).bind((token_exchange_url, params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess) => IO.createIO(cb => Request.get({
-    url: token_exchange_url,
+]).bind((tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess) => IO.createIO(cb => Request.get({
+    url: tokenExchangeURL,
     json: true
-}, cb))).map((token_exchange_url, params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => [
+}, cb))).map((tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => [
     {
-        user_access_token: respBody.access_token,
-        expires_at: respBody.expires_at,
-        user_id: respBody.id
+        userAccessToken: respBody.access_token,
+        expiresAt: respBody.expires_at,
+        userId: respBody.id
     },
-    token_exchange_url,
+    tokenExchangeURL,
     params,
-    app_access_token,
     csrfCheck,
     req,
     res,
@@ -111,12 +92,11 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     err,
     resp,
     respBody
-]).map((view, token_exchange_url, params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => [
-    me_endpoint_base_url + '?access_token=' + respBody.access_token,
+]).map((view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => [
+    meEndpointBaseURL + '?access_token=' + view.userAccessToken,
     view,
-    token_exchange_url,
+    tokenExchangeURL,
     params,
-    app_access_token,
     csrfCheck,
     req,
     res,
@@ -125,22 +105,21 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     err,
     resp,
     respBody
-]).bind((me_endpoint_url, view, token_exchange_url, params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => IO.createIO(cb => Request.get({
-    url: me_endpoint_url,
+]).bind((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => IO.createIO(cb => Request.get({
+    url: meEndpointURL,
     json: true
-}, cb))).map((me_endpoint_url, view, token_exchange_url, params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => {
-    Object.defineProperty(view, 'phone_num', {
+}, cb))).map((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => {
+    Object.defineProperty(view, 'phoneNumber', {
         value: respBodyURL.phone.number,
         enumerable: true,
         writable: false,
         configurable: true
     });
     return [
-        me_endpoint_url,
+        meEndpointURL,
         view,
-        token_exchange_url,
+        tokenExchangeURL,
         params,
-        app_access_token,
         csrfCheck,
         req,
         res,
@@ -153,13 +132,12 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
         respURL,
         respBodyURL
     ];
-}).map((me_endpoint_url, view, token_exchange_url, params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => [
+}).map((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => [
     Mustache.to_html(loadLoginSuccess, view),
-    me_endpoint_url,
+    meEndpointURL,
     view,
-    token_exchange_url,
+    tokenExchangeURL,
     params,
-    app_access_token,
     csrfCheck,
     req,
     res,
@@ -171,8 +149,8 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     errURL,
     respURL,
     respBodyURL
-]).then((html, me_endpoint_url, view, token_exchange_url, params, app_access_token, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => {
-    res.send('Account kit implementation in clean');
+]).then((html, meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => {
+    res.send(html);
 });
 IO.createIO(cb => app.get('/logout', cb)).map((req, res, _) => {
     (delete req.session.user)

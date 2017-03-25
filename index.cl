@@ -9,7 +9,7 @@ Mustache = require 'mustache'
 Request = require 'request'
 Querystring  = require 'querystring'
 
-appConfig = require './config/account-kit.json'
+appConfig = require './account-kit-config.json'
 
 bodyParserJSON = bodyParser.json ()
 bodyParserURL =  bodyParser.urlencoded {extended: true }
