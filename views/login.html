@@ -5,7 +5,7 @@
 </head>
 <body>
 <button onclick="smsLogin();">Login via SMS</button>
-<form id="login_success" method="post" action="/login_success">
+<form id="login" method="post" action="/login">
   <input id="csrf" type="hidden" name="csrf" />
   <input id="code" type="hidden" name="code" />
 </form>
@@ -28,7 +28,7 @@
     if (response.status === "PARTIALLY_AUTHENTICATED") {
       document.getElementById("code").value = response.code;
       document.getElementById("csrf").value = response.state;
-      document.getElementById("login_success").submit();
+      document.getElementById("login").submit();
     }
     else if (response.status === "NOT_AUTHENTICATED") {
       // handle authentication failure
