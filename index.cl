@@ -18,12 +18,11 @@ AKINIT =  { appId: akConfig.appID,
           }
 
 bodyParserJSON = bodyParser.json ()
-bodyParserURL =  bodyParser.urlencoded {extended: true }
 
 app = express ()
 app.use (express.static (path.join __dirname 'public'))
 app.use bodyParserJSON
-app.use bodyParserURL
+app.use (bodyParser.urlencoded {extended: true })
 
 meEndpointBaseURL = 'https://graph.accountkit.com/' ++ akConfig.version ++ '/me'
 tokenExchangeBaseURL = 'https://graph.accountkit.com/' ++ akConfig.version ++ '/access_token'
@@ -52,15 +51,14 @@ do
                  grant_type: 'authorization_code',
                  code: req.body.code,
                  access_token: ['AA', akConfig.appID, akConfig.appSecret].join '|'
-                    }
-   loadLoginSuccess <- readFile 'views/login_success.html'
+               }
    let tokenExchangeURL = tokenExchangeBaseURL ++ '?' ++ (Querystring.stringify params)
    err resp respBody <- IO (Request.get {url: tokenExchangeURL, json: true})
    let view = {
-            userAccessToken: respBody.access_token,
-            expiresAt: respBody.expires_at,
-            userId: respBody.id,
-                }
+                userAccessToken: respBody.access_token,
+                expiresAt: respBody.expires_at,
+                userId: respBody.id,
+              }
    let meEndpointURL = meEndpointBaseURL ++ '?access_token=' ++ view.userAccessToken
    errURL respURL respBodyURL <- IO (Request.get {url: meEndpointURL, json:true })
    defineProp view 'phoneNumber' respBodyURL.phone.number

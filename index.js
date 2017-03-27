@@ -16,11 +16,10 @@ const AKINIT = {
     version: akConfig.version
 };
 const bodyParserJSON = bodyParser.json();
-const bodyParserURL = bodyParser.urlencoded({ extended: true });
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParserJSON);
-app.use(bodyParserURL);
+app.use(bodyParser.urlencoded({ extended: true }));
 const meEndpointBaseURL = 'https://graph.accountkit.com/' + akConfig.version + '/me';
 const tokenExchangeBaseURL = 'https://graph.accountkit.com/' + akConfig.version + '/access_token';
 app.use(sessions({
@@ -54,18 +53,17 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     req,
     res,
     _
-]).bind((params, csrfCheck, req, res, _) => IO.readFile('views/login_success.html')).map((params, csrfCheck, req, res, _, loadLoginSuccess) => [
+]).map((params, csrfCheck, req, res, _) => [
     tokenExchangeBaseURL + '?' + Querystring.stringify(params),
     params,
     csrfCheck,
     req,
     res,
-    _,
-    loadLoginSuccess
-]).bind((tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess) => IO.createIO(cb => Request.get({
+    _
+]).bind((tokenExchangeURL, params, csrfCheck, req, res, _) => IO.createIO(cb => Request.get({
     url: tokenExchangeURL,
     json: true
-}, cb))).map((tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => [
+}, cb))).map((tokenExchangeURL, params, csrfCheck, req, res, _, err, resp, respBody) => [
     {
         userAccessToken: respBody.access_token,
         expiresAt: respBody.expires_at,
@@ -77,11 +75,10 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     req,
     res,
     _,
-    loadLoginSuccess,
     err,
     resp,
     respBody
-]).map((view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => [
+]).map((view, tokenExchangeURL, params, csrfCheck, req, res, _, err, resp, respBody) => [
     meEndpointBaseURL + '?access_token=' + view.userAccessToken,
     view,
     tokenExchangeURL,
@@ -90,14 +87,13 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     req,
     res,
     _,
-    loadLoginSuccess,
     err,
     resp,
     respBody
-]).bind((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody) => IO.createIO(cb => Request.get({
+]).bind((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, err, resp, respBody) => IO.createIO(cb => Request.get({
     url: meEndpointURL,
     json: true
-}, cb))).map((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => {
+}, cb))).map((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, err, resp, respBody, errURL, respURL, respBodyURL) => {
     Object.defineProperty(view, 'phoneNumber', {
         value: respBodyURL.phone.number,
         enumerable: true,
@@ -113,7 +109,6 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
         req,
         res,
         _,
-        loadLoginSuccess,
         err,
         resp,
         respBody,
@@ -121,7 +116,7 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
         respURL,
         respBodyURL
     ];
-}).map((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => [
+}).map((meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, err, resp, respBody, errURL, respURL, respBodyURL) => [
     Mustache.to_html(loadLoginSuccess, view),
     meEndpointURL,
     view,
@@ -131,14 +126,13 @@ IO.createIO(cb => app.post('/login_success', cb)).map((req, res, _) => [
     req,
     res,
     _,
-    loadLoginSuccess,
     err,
     resp,
     respBody,
     errURL,
     respURL,
     respBodyURL
-]).then((html, meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, loadLoginSuccess, err, resp, respBody, errURL, respURL, respBodyURL) => {
+]).then((html, meEndpointURL, view, tokenExchangeURL, params, csrfCheck, req, res, _, err, resp, respBody, errURL, respURL, respBodyURL) => {
     res.send(html);
 });
 IO.createIO(cb => app.get('/logout', cb)).map((request, response, _) => {
