@@ -1,20 +1,24 @@
 # clean-account-kit
-Implementation of facebook account kit in clean-lang
 
-**Software requirements**:
+Clean starter kit with Facebook Account Kit.
 
-​      [clean](https://github.com/geekskool/clean)
+## Software requirements
 
-​      [Account kit](https://developers.facebook.com/docs/accountkit)
+​    $ npm install cleanlang -g
 
-**Install dependencies by navigating to project directory**
+​[Account kit](https://developers.facebook.com/docs/accountkit)
 
-​    `npm install`
+## Install
 
-**Add app id/secret**
+    $ git clone git@github.com:geekskool/clean-account-kit.git <myApp>
+    $ cd <myApp>
+​    $ npm install
 
-Edit account-kit-config-bak.json and rename to account-kit-config.json
+## Add Account Kit ID and Secret
 
-**Run** **app**
+Edit account-kit-config-bak.json and rename to account-kit-config.json. Edit the App Id and Secret
+in the JSON file.
 
-  `clean index.cl`
+## Run
+
+    $ clean index.cl
