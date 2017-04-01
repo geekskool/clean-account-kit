@@ -36,18 +36,39 @@ app.use(sessions({
     duration: 7 * 24 * 60 * 60 * 1000,
     activeDuration: 24 * 60 * 60 * 1000
 }));
-IO.createIO(cb => app.get('/', cb)).maybeUndefined((request, response) => request.session.user, (request, response) => response.redirect('/login')).then((request, response) => {
-    response.send('hello world');
-});
-IO.createIO(cb => app.get('/login', cb)).maybeTrue((request, response, _) => !!request.session.user, (request, response, _) => response.redirect('/')).bind((request, response, _) => IO.readFile('views/login.html')).then((request, response, _, loginTemplate) => {
-    response.send(Mustache.to_html(loginTemplate, AKINIT));
-});
-IO.createIO(cb => app.post('/login', cb)).map((request, response, _) => [
-    request.body.csrf === csrfGuid,
+IO.createIO(cb => app.get('/', cb)).map((req, res) => [
+    req,
+    res
+]).maybeUndefined((req, res) => req.session.user, (req, res) => res.redirect('/login')).map((req, res) => {
+    (res.send('hello world'))
+    return [
+        req,
+        res
+    ];
+}).then((req, res) => []);
+IO.createIO(cb => app.get('/login', cb)).map((request, response) => [
+    request,
+    response
+]).maybeTrue((request, response) => !!request.session.user, (request, response) => response.redirect('/')).bind((request, response) => IO.readFile('views/login.html')).map((request, response, loginTemplate) => [
     request,
     response,
-    _
-]).maybeFalse((csrfCheck, request, response, _) => csrfCheck, (csrfCheck, request, response, _) => respose.end('Something went terribly wrong')).map((csrfCheck, request, response, _) => {
+    loginTemplate
+]).map((request, response, loginTemplate) => {
+    (response.send(Mustache.to_html(loginTemplate, AKINIT)))
+    return [
+        request,
+        response,
+        loginTemplate
+    ];
+}).then((request, response, loginTemplate) => []);
+IO.createIO(cb => app.post('/login', cb)).map((request, response) => [
+    request,
+    response
+]).map((request, response) => [
+    request.body.csrf === csrfGuid,
+    request,
+    response
+]).maybeFalse((csrfCheck, request, response) => csrfCheck, (csrfCheck, request, response) => response.send({ success: false })).map((csrfCheck, request, response) => {
     Object.defineProperty(params, 'code', {
         value: request.body.code,
         enumerable: true,
@@ -57,16 +78,32 @@ IO.createIO(cb => app.post('/login', cb)).map((request, response, _) => [
     return [
         csrfCheck,
         request,
-        response,
-        _
+        response
     ];
-}).bind((csrfCheck, request, response, _) => IO.createIO(cb => Request.get({
+}).bind((csrfCheck, request, response) => IO.createIO(cb => Request.get({
     url: tokenExchangeBaseURL + Querystring.stringify(params),
     json: true
-}, cb))).bind((csrfCheck, request, response, _, err, resp, respBody) => IO.createIO(cb => Request.get({
+}, cb))).map((csrfCheck, request, response, err, resp, respBody) => [
+    csrfCheck,
+    request,
+    response,
+    err,
+    resp,
+    respBody
+]).bind((csrfCheck, request, response, err, resp, respBody) => IO.createIO(cb => Request.get({
     url: meEndpointBaseURL + respBody.access_token,
     json: true
-}, cb))).map((csrfCheck, request, response, _, err, resp, respBody, errURL, respURL, respBodyURL) => {
+}, cb))).map((csrfCheck, request, response, err, resp, respBody, errURL, respURL, respBodyURL) => [
+    csrfCheck,
+    request,
+    response,
+    err,
+    resp,
+    respBody,
+    errURL,
+    respURL,
+    respBodyURL
+]).map((csrfCheck, request, response, err, resp, respBody, errURL, respURL, respBodyURL) => {
     Object.defineProperty(request.session, 'user', {
         value: respBodyURL.phone.number,
         enumerable: true,
@@ -77,7 +114,6 @@ IO.createIO(cb => app.post('/login', cb)).map((request, response, _) => [
         csrfCheck,
         request,
         response,
-        _,
         err,
         resp,
         respBody,
@@ -85,18 +121,35 @@ IO.createIO(cb => app.post('/login', cb)).map((request, response, _) => [
         respURL,
         respBodyURL
     ];
-}).then((csrfCheck, request, response, _, err, resp, respBody, errURL, respURL, respBodyURL) => {
-    response.redirect('/');
-});
-IO.createIO(cb => app.get('/logout', cb)).map((request, response, _) => {
+}).map((csrfCheck, request, response, err, resp, respBody, errURL, respURL, respBodyURL) => {
+    (response.send({ success: true }))
+    return [
+        csrfCheck,
+        request,
+        response,
+        err,
+        resp,
+        respBody,
+        errURL,
+        respURL,
+        respBodyURL
+    ];
+}).then((csrfCheck, request, response, err, resp, respBody, errURL, respURL, respBodyURL) => []);
+IO.createIO(cb => app.get('/logout', cb)).map((request, response) => [
+    request,
+    response
+]).map((request, response) => {
     (delete request.session.user)
     return [
         request,
-        response,
-        _
+        response
     ];
-}).then((request, response, _) => {
-    response.redirect('/');
-});
+}).map((request, response) => {
+    (response.redirect('/'))
+    return [
+        request,
+        response
+    ];
+}).then((request, response) => []);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);

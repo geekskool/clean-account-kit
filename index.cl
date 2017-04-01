@@ -30,7 +30,7 @@ meEndpointBaseURL = 'https://graph.accountkit.com/' ++ akConfig.version ++ '/me'
 
 params = { grant_type: 'authorization_code',
            access_token: ['AA', akConfig.appID, akConfig.appSecret].join '|'
-          }
+         }
 
 app.use (sessions {
   cookieName: 'session',
@@ -39,29 +39,29 @@ app.use (sessions {
   activeDuration: 24 * 60 * 60 * 1000 })
 
 do
-  request response <- IO (app.get '/')
-  maybeUndefined request.session.user (response.redirect '/login')
-  response.send 'hello world'
+  req res <- IO (app.get '/')
+  maybeUndefined req.session.user (res.redirect '/login')
+  res.send 'hello world'
 
 do
-  request response _ <- IO (app.get '/login')
+  request response <- IO (app.get '/login')
   maybeTrue !!request.session.user (response.redirect '/')
   loginTemplate <- readFile 'views/login.html'
   response.send (Mustache.to_html loginTemplate AKINIT)
 
 do
-  request response _ <- IO (app.post '/login')
+  request response <- IO (app.post '/login')
   let csrfCheck = request.body.csrf == csrfGuid
-  maybeFalse csrfCheck (respose.end 'Something went terribly wrong')
+  maybeFalse csrfCheck (response.send {success: false})
   defineProp params 'code'  request.body.code
   err resp respBody <- IO (Request.get {url: tokenExchangeBaseURL ++ (Querystring.stringify params), json: true})
   errURL respURL respBodyURL <- IO (Request.get {url: meEndpointBaseURL ++ respBody.access_token, json:true })
   defineProp request.session 'user' respBodyURL.phone.number
-  response.redirect '/'
+  response.send {success: true}
 
 
 do
-  request response _ <- IO (app.get '/logout')
+  request response <- IO (app.get '/logout')
   delete request.session.user
   response.redirect '/'
 

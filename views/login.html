@@ -1,54 +1,23 @@
 <html>
 <head>
-  <script src="https://sdk.accountkit.com/en_US/sdk.js"></script>
-
+  <link rel="stylesheet" type ="text/css"href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.0/css/bulma.min.css"/>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body>
-<button onclick="smsLogin();">Login via SMS</button>
-<form id="login" method="post" action="/login">
-  <input id="csrf" type="hidden" name="csrf" />
-  <input id="code" type="hidden" name="code" />
-</form>
-
-
-<script>
-  // initialize Account Kit with CSRF protection
-  AccountKit_OnInteractive = function(){
-    AccountKit.init(
-      {
-        appId:'{{appId}}',
-        state:'{{csrf}}',
-        version:"{{version}}"
-      }
-    )
-  };
-
-  // login callback
-  function loginCallback(response) {
-    if (response.status === "PARTIALLY_AUTHENTICATED") {
-      document.getElementById("code").value = response.code;
-      document.getElementById("csrf").value = response.state;
-      document.getElementById("login").submit();
-    }
-    else if (response.status === "NOT_AUTHENTICATED") {
-      // handle authentication failure
-    }
-    else if (response.status === "BAD_PARAMS") {
-      // handle bad parameters
-    }
-  }
-
-  // phone form submission handler
-  function smsLogin() {
-    AccountKit.login(
-      'PHONE',
-      {}, // will use default values if not specified
-      loginCallback
-    );
-  }
-
-
-  // email form submission handler
-  </script>
-  </body>
+<button class="button is-primary is-large">
+  <span class="icon">
+    <i class="fa fa-send"></i>
+  </span>
+  <span>Login via SMS</span>
+</button>
+<script type="text/javascript">
+const appParams = {
+  appId:'{{appId}}',
+  state:'{{csrf}}',
+  version:"{{version}}"
+}
+</script>
+<script src="https://sdk.accountkit.com/en_US/sdk.js"></script>
+<script src="js/accountkit.js"></script>
+</body>
 </html>
